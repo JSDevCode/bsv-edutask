@@ -2,6 +2,9 @@ import pytest
 import unittest.mock as mock
 from src.controllers.usercontroller import UserController
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#        Fixtures
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 @pytest.fixture
 def usercontroller():
@@ -21,6 +24,18 @@ def wrong_email_format():
 def email_not_found():
     return 'hi@hotmail.com'
 
+@pytest.fixture
+def email_missing_top_level_domain():
+    return 'hello@hotmail'
+
+@pytest.fixture
+def email_missing_local_part():
+    return '@hotmail.com'
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#        Core tests
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 @pytest.mark.unit
 def test_get_user_by_email_invalid(wrong_email_format, usercontroller):
     with pytest.raises(ValueError):
@@ -28,34 +43,75 @@ def test_get_user_by_email_invalid(wrong_email_format, usercontroller):
 
 @pytest.mark.unit
 def test_get_user_by_email_not_found(email_not_found, usercontroller):
-        usercontroller.dao.find.return_value = []
-        result = usercontroller.get_user_by_email(email_not_found)
-        assert result is None
+    usercontroller.dao.find.return_value = []
+    result = usercontroller.get_user_by_email(email_not_found)
+    assert result is None
 
 @pytest.mark.unit
 def test_get_user_by_email_valid(correct_email_input, usercontroller):
-        usercontroller.dao.find.return_value = ['user_1']
-        result = usercontroller.get_user_by_email(correct_email_input)
-        assert result == 'user_1'
+    usercontroller.dao.find.return_value = ['user_1']
+    result = usercontroller.get_user_by_email(correct_email_input)
+    assert result == 'user_1'
 
 @pytest.mark.unit
 def test_get_user_by_email_duplicate_warning(correct_email_input, usercontroller, capsys):
-        usercontroller.dao.find.return_value = ['user_1', 'user_2', 'user_3']
-        usercontroller.get_user_by_email(correct_email_input)
-        # captures everything printed
-        captured = capsys.readouterr()
-        # captured.out gives the actual printed text
-        assert f'Error: more than one user found with mail {correct_email_input}' in captured.out
+    usercontroller.dao.find.return_value = ['user_1', 'user_2', 'user_3']
+    usercontroller.get_user_by_email(correct_email_input)
+    # captures everything printed
+    captured = capsys.readouterr()
+    # captured.out gives the actual printed text
+    assert f'Error: more than one user found with mail {correct_email_input}' in captured.out
 
 @pytest.mark.unit
 def test_get_user_by_email_duplicate_first_user(correct_email_input, usercontroller):
-        usercontroller.dao.find.return_value = ['user_1', 'user_2', 'user_3']
-        result = usercontroller.get_user_by_email(correct_email_input)
-        assert result == 'user_1'
+    usercontroller.dao.find.return_value = ['user_1', 'user_2', 'user_3']
+    result = usercontroller.get_user_by_email(correct_email_input)
+    assert result == 'user_1'
 
 @pytest.mark.unit
 def test_get_user_by_email_dao_exception(correct_email_input, usercontroller):
-        # Mock DAO to throw an exception when the find-method is called
-        usercontroller.dao.find.side_effect = Exception
-        with pytest.raises(Exception):
-            usercontroller.get_user_by_email(correct_email_input)
+    # Mock DAO to throw an exception when the find-method is called
+    usercontroller.dao.find.side_effect = Exception
+    with pytest.raises(Exception):
+        usercontroller.get_user_by_email(correct_email_input)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#        Supplementary email format enforcement tests
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Verifies that an email missing the top-level domain is rejected as invalid.
+@pytest.mark.unit
+def test_get_user_by_email_invalid_missing_top_level_domain(email_missing_top_level_domain, usercontroller):
+    with pytest.raises(ValueError):
+        usercontroller.get_user_by_email(email_missing_top_level_domain)
+
+
+# Verifies that an email missing the local part is rejected as invalid.
+@pytest.mark.unit
+def test_get_user_by_email_invalid_missing_local_part(email_missing_local_part, usercontroller):
+    with pytest.raises(ValueError):
+        usercontroller.get_user_by_email(email_missing_local_part)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#        Supplementary DAO mock interaction tests
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#        Uses built-in mock assertion methods to verify DAO interaction
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Verifies that invalid email input is rejected before any DAO lookup is even attempted.
+@pytest.mark.unit
+def test_get_user_by_email_invalid_no_dao_lookup(wrong_email_format, usercontroller):
+    with pytest.raises(ValueError):
+        usercontroller.get_user_by_email(wrong_email_format)
+
+    usercontroller.dao.find.assert_not_called()
+
+
+# Verifies that a valid email causes exactly one DAO lookup with the correct email query.
+@pytest.mark.unit
+def test_get_user_by_email_valid_correct_dao_query(correct_email_input, usercontroller):
+    usercontroller.dao.find.return_value = ['user_1']
+
+    usercontroller.get_user_by_email(correct_email_input)
+
+    usercontroller.dao.find.assert_called_once_with({'email': correct_email_input})
