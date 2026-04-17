@@ -17,29 +17,30 @@ def correct_email_input():
     return 'hello@hotmail.com'
 
 @pytest.fixture
-def wrong_email_format():
-    return 'hello.com'
-
-@pytest.fixture
 def email_not_found():
     return 'hi@hotmail.com'
 
 @pytest.fixture
-def email_missing_top_level_domain():
-    return 'hello@hotmail'
+def wrong_email_format_no_a():
+    return 'hello.com'
 
 @pytest.fixture
-def email_missing_local_part():
-    return '@hotmail.com'
+def wrong_email_format_no_local():
+    return '@hello.com'
+
+@pytest.fixture
+def wrong_email_format_no_top_level_domain():
+    return 'hi@hello'
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #        Core tests
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 @pytest.mark.unit
-def test_get_user_by_email_invalid(wrong_email_format, usercontroller):
+def test_get_user_by_email_invalid(wrong_email_format_no_a, usercontroller):
     with pytest.raises(ValueError):
-        usercontroller.get_user_by_email(wrong_email_format)
+        usercontroller.get_user_by_email(wrong_email_format_no_a)
 
 @pytest.mark.unit
 def test_get_user_by_email_not_found(email_not_found, usercontroller):
@@ -81,16 +82,16 @@ def test_get_user_by_email_dao_exception(correct_email_input, usercontroller):
 
 # Verifies that an email missing the top-level domain is rejected as invalid.
 @pytest.mark.unit
-def test_get_user_by_email_invalid_missing_top_level_domain(email_missing_top_level_domain, usercontroller):
+def test_get_user_by_email_invalid_missing_top_level_domain(wrong_email_format_no_top_level_domain, usercontroller):
     with pytest.raises(ValueError):
-        usercontroller.get_user_by_email(email_missing_top_level_domain)
+        usercontroller.get_user_by_email(wrong_email_format_no_top_level_domain)
 
 
 # Verifies that an email missing the local part is rejected as invalid.
 @pytest.mark.unit
-def test_get_user_by_email_invalid_missing_local_part(email_missing_local_part, usercontroller):
+def test_get_user_by_email_invalid_missing_local_part(wrong_email_format_no_local, usercontroller):
     with pytest.raises(ValueError):
-        usercontroller.get_user_by_email(email_missing_local_part)
+        usercontroller.get_user_by_email(wrong_email_format_no_local)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #        Supplementary DAO mock interaction tests
@@ -100,9 +101,9 @@ def test_get_user_by_email_invalid_missing_local_part(email_missing_local_part, 
 
 # Verifies that invalid email input is rejected before any DAO lookup is even attempted.
 @pytest.mark.unit
-def test_get_user_by_email_invalid_no_dao_lookup(wrong_email_format, usercontroller):
+def test_get_user_by_email_invalid_no_dao_lookup(wrong_email_format_no_a, usercontroller):
     with pytest.raises(ValueError):
-        usercontroller.get_user_by_email(wrong_email_format)
+        usercontroller.get_user_by_email(wrong_email_format_no_a)
 
     usercontroller.dao.find.assert_not_called()
 
