@@ -17,6 +17,10 @@ def correct_email_input():
     return 'hello@hotmail.com'
 
 @pytest.fixture
+def correct_email_input_many():
+    return 'many@hotmail.com'
+
+@pytest.fixture
 def email_not_found():
     return 'hi@hotmail.com'
 
@@ -55,18 +59,18 @@ def test_get_user_by_email_valid(correct_email_input, usercontroller):
     assert result == 'user_1'
 
 @pytest.mark.unit
-def test_get_user_by_email_duplicate_warning(correct_email_input, usercontroller, capsys):
+def test_get_user_by_email_duplicate_warning(correct_email_input_many, usercontroller, capsys):
     usercontroller.dao.find.return_value = ['user_1', 'user_2', 'user_3']
-    usercontroller.get_user_by_email(correct_email_input)
+    usercontroller.get_user_by_email(correct_email_input_many)
     # captures everything printed
     captured = capsys.readouterr()
     # captured.out gives the actual printed text
-    assert f'Error: more than one user found with mail {correct_email_input}' in captured.out
+    assert f'Error: more than one user found with mail {correct_email_input_many}' in captured.out
 
 @pytest.mark.unit
-def test_get_user_by_email_duplicate_first_user(correct_email_input, usercontroller):
+def test_get_user_by_email_duplicate_first_user(correct_email_input_many, usercontroller):
     usercontroller.dao.find.return_value = ['user_1', 'user_2', 'user_3']
-    result = usercontroller.get_user_by_email(correct_email_input)
+    result = usercontroller.get_user_by_email(correct_email_input_many)
     assert result == 'user_1'
 
 @pytest.mark.unit
