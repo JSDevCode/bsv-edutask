@@ -11,14 +11,22 @@ from src.util.dao import DAO
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 @pytest.fixture
-def task_dao():
+def task_dao(monkeypatch):
     """
-    Create a fresh DAO for the task collection.
+    Create a fresh DAO for the task collection in the test database.
+
+    The pytest monkeypatch fixture temporarily sets MONGO_DB_NAME to test_edutask
+    for the duration of the test.
 
     The collection is dropped before each test and recreated through DAO("task"),
     so that every test starts from a known empty state with the validator applied.
     """
+    test_db_name = "test_edutask"
+    monkeypatch.setenv("MONGO_DB_NAME", test_db_name)
+
     dao = DAO("task")
+
+
     dao.drop()
 
     dao = DAO("task")

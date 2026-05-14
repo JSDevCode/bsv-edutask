@@ -15,24 +15,33 @@ from bson.objectid import ObjectId
 class DAO:
 
     def __init__(self, collection_name: str):
-        """Establish a data access object to a collection of the given name in the MongoDB database as specified in the environment variables. When the collection is first creted, it will be associated to a validator (see https://www.mongodb.com/docs/manual/core/schema-validation/) to ensure some basic data compliance.
-
-        parameters:
-            collection_name -- the name of the collection (a collection validator of the same name must be available)
+        """
+        Establish a data access object to a collection of the given name in the
+        MongoDB database as specified in the environment variables. When the
+        collection is first created, it will be associated with a validator.
         """
 
-        # load the local mongo URL (something like mongodb://localhost:27017)
-        LOCAL_MONGO_URL = dotenv_values('.env').get('MONGO_URL')
-        # check out of the environment (which can be overridden by the docker-compose file) also specifies an URL, and use that instead if it exists
-        MONGO_URL = os.environ.get('MONGO_URL', LOCAL_MONGO_URL)
+        # Load the local MongoDB URL, for example mongodb://localhost:27017.
+        LOCAL_MONGO_URL = dotenv_values(".env").get("MONGO_URL", "mongodb://localhost:27017")
 
-        # connect to the MongoDB and select the appropriate database
+        # Allow the MongoDB URL to be overridden by the environment.
+        MONGO_URL = os.environ.get("MONGO_URL", LOCAL_MONGO_URL)
+
+        # Load the local MongoDB database name, defaulting to edutask.
+        LOCAL_MONGO_DB_NAME = dotenv_values(".env").get("MONGO_DB_NAME", "edutask")
+
+        # Allow the database name to be overridden by the environment.
+        MONGO_DB_NAME = os.environ.get("MONGO_DB_NAME", LOCAL_MONGO_DB_NAME)
+
+        # Connect to MongoDB and select the appropriate database.
         print(
-            f'Connecting to collection {collection_name} on MongoDB at url {MONGO_URL}')
+            f"Connecting to collection {collection_name} "
+            f"on MongoDB database {MONGO_DB_NAME} at url {MONGO_URL}"
+        )
         client = pymongo.MongoClient(MONGO_URL)
-        database = client.edutask
+        database = client[MONGO_DB_NAME]
 
-        # create the collection if it does not yet exist
+        # Create the collection if it does not yet exist.
         if collection_name not in database.list_collection_names():
             validator = getValidator(collection_name)
             database.create_collection(collection_name, validator=validator)
